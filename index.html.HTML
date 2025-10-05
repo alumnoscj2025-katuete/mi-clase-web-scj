@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examen - Modo Indicativo: Tiempos Compuestos 9º Grado</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 10px; background: #f5f5f5; }
+  h1 { color: #333; text-align: center; }
+  .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  label { display: block; margin: 6px 0; }
+  select, input[type=text] { width: 100%; padding: 10px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  button { padding: 12px 20px; margin-top: 10px; font-size: 16px; border-radius: 8px; border: none; cursor: pointer; }
+  #btnEnviar { background-color: #2196F3; color: white; }
+  #btnPDF { background-color: #4CAF50; color: white; display: none; }
+  .pregunta { margin-bottom: 15px; }
+  .opcion { margin-left: 20px; }
+  @media(max-width:600px){ select,input[type=text],button{font-size:16px;}}
+</style>
+</head>
+<body>
+
+<h1>📘 Examen de Castellano - Tiempos Compuestos</h1>
+
+<div class="card">
+  <label for="selTurno">Turno:</label>
+  <select id="selTurno"><option value="">-- Turno --</option></select>
+
+  <label for="selGrado">Grado:</label>
+  <select id="selGrado"><option value="">-- Grado --</option></select>
+
+  <label for="selEst">Estudiante:</label>
+  <select id="selEst"><option value="">-- Estudiante --</option></select>
+
+  <label for="selMat">Materia:</label>
+  <select id="selMat"><option value="">-- Materia --</option></select>
+</div>
+
+<div id="preguntas"></div>
+
+<button id="btnEnviar">📤 Enviar Respuestas</button>
+<button id="btnPDF">💾 Generar PDF</button>
+
+<script>
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzTTvI2QYoBAHcoQKY8YDftGirkD6c5FTUZ0PBkhp83iyJjUFNd0OgKLG4l7iMtu3az/exec";
+
+const selTurno = document.getElementById("selTurno");
+const selGrado = document.getElementById("selGrado");
+const selEst   = document.getElementById("selEst");
+const selMat   = document.getElementById("selMat");
+const divPreg  = document.getElementById("preguntas");
+const btnEnviar= document.getElementById("btnEnviar");
+const btnPDF   = document.getElementById("btnPDF");
+
+// Arreglo de preguntas
+const examenData = [
+  {tipo:"multiple", pregunta:"1. Identifica el pretérito perfecto compuesto: 'Ellos ___ a España este año.'", opciones:["han viajado","habían viajado","habrán viajado"], correcta:"han viajado"},
+  {tipo:"multiple", pregunta:"2. ¿Cuál es la forma correcta del pluscuamperfecto para 'yo comer'?", opciones:["he comido","había comido","habré comido"], correcta:"había comido"},
+  {tipo:"multiple", pregunta:"3. Futuro compuesto de 'nosotros terminar':", opciones:["hemos terminado","habremos terminado","habíamos terminado"], correcta:"habremos terminado"},
+  {tipo:"vf", pregunta:"4. El pretérito anterior se usa comúnmente hoy en día.", correcta:"Falso"},
+  {tipo:"vf", pregunta:"5. El condicional compuesto indica acción condicional en el pasado.", correcta:"Verdadero"},
+  {tipo:"multiple", pregunta:"6. Identifica el error: 'Cuando llegué, él hubo comido'.", opciones:["Correcto","Debería ser 'había comido'","Debería ser 'ha comido'"], correcta:"Debería ser 'había comido'"},
+  {tipo:"multiple", pregunta:"7. Condicional compuesto de 'yo ayudar' en 1ª persona:", opciones:["habría ayudado","he ayudado","había ayudado"], correcta:"habría ayudado"},
+  {tipo:"vf", pregunta:"8. El pretérito perfecto compuesto conecta el pasado con el presente.", correcta:"Verdadero"},
+  {tipo:"vf", pregunta:"9. El pluscuamperfecto indica acción anterior a otra acción pasada.", correcta:"Verdadero"},
+  {tipo:"multiple", pregunta:"10. Futuro compuesto de 'ellos llegar':", opciones:["han llegado","habrán llegado","habían llegado"], correcta:"habrán llegado"}
+];
+
+window.onload = () => {
+  cargarConfig();
+  selTurno.onchange = cargarEstudiantes;
+  selGrado.onchange = cargarEstudiantes;
+  selMat.onchange   = mostrarPreguntas;
+  btnEnviar.onclick = enviar;
+  btnPDF.onclick    = generarPDF;
+};
+
+// Cargar configuración de turno, grado y materia
+async function cargarConfig(){
+  try{
+    const res = await fetch(`${URL_SCRIPT}?action=config`);
+    const cfg = await res.json();
+    llenarSelect(selGrado,cfg.grados);
+    llenarSelect(selTurno,cfg.turnos);
+    llenarSelect(selMat,cfg.materias);
+  }catch(err){
+    alert("❌ Error al cargar configuración: "+err.message);
+  }
+}
+
+function llenarSelect(sel,arr){
+  sel.innerHTML="";
+  let def = sel===selGrado?"-- Grado --": sel===selTurno?"-- Turno --":"-- Materia --";
+  sel.appendChild(new Option(def,""));
+  arr.forEach(v=>sel.appendChild(new Option(v,v)));
+}
+
+// Cargar estudiantes
+async function cargarEstudiantes(){
+  const g=selGrado.value, t=selTurno.value;
+  if(!g||!t) return;
+  try{
+    const res = await fetch(`${URL_SCRIPT}?action=estudiantes&grado=${g}&turno=${t}`);
+    const lst = await res.json();
+    selEst.innerHTML="";
+    selEst.appendChild(new Option("-- Estudiante --",""));
+    lst.forEach(e=>{
+      const nombre = e.nombre || e; // ⚡ solo string
+      selEst.appendChild(new Option(nombre,nombre));
+    });
+  }catch(err){
+    alert("❌ Error al cargar estudiantes: "+err.message);
+    console.error(err);
+  }
+}
+
+// Mostrar preguntas
+function mostrarPreguntas(){
+  divPreg.innerHTML="";
+  examenData.forEach((q,i)=>{
+    let html=`<div class="card pregunta"><p><b>${q.pregunta}</b></p>`;
+    if(q.tipo==="multiple"){
+      q.opciones.forEach(opt=>html+=`<label class="opcion"><input type="radio" name="p${i}" value="${opt}"> ${opt}</label>`);
+    } else if(q.tipo==="vf"){
+      html+=`<label class="opcion"><input type="radio" name="p${i}" value="Verdadero"> Verdadero</label>`;
+      html+=`<label class="opcion"><input type="radio" name="p${i}" value="Falso"> Falso</label>`;
+    }
+    html+="</div>";
+    divPreg.insertAdjacentHTML("beforeend",html);
+  });
+}
+
+// Control de intentos máximo 2
+function checkIntentos(nombre){
+  let intentos = JSON.parse(localStorage.getItem("intentosExamen")||"{}");
+  if(!intentos[nombre]) intentos[nombre]=0;
+  if(intentos[nombre]>=2) return false;
+  intentos[nombre]++;
+  localStorage.setItem("intentosExamen",JSON.stringify(intentos));
+  return true;
+}
+
+// Enviar examen
+async function enviar(){
+  const est=selEst.value, mat=selMat.value, g=selGrado.value, t=selTurno.value;
+  if(!est||!mat) return alert("⚠️ Completá todos los campos");
+  if(!checkIntentos(est)){ alert("⚠️ Ya has realizado los 2 intentos permitidos."); return; }
+
+  const preguntas=examenData.map(q=>q.pregunta);
+  const correctas=examenData.map(q=>q.correcta);
+  const respuestas=examenData.map((_,i)=>{
+    const sel=document.querySelector(`input[name='p${i}']:checked`);
+    return sel? sel.value : "";
+  });
+
+  const payload={estudiante:est,grado:g,turno:t,materia:mat,preguntas,respuestas,correctas};
+
+  try{
+    const res = await fetch(URL_SCRIPT,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(payload)
+    });
+    const text = await res.text();
+    console.log("Respuesta del script:", text); // 🔹 depuración
+    alert("✅ Respuestas enviadas correctamente. Revisa la consola para verificar.");
+    btnPDF.style.display="inline-block";
+  }catch(err){
+    alert("❌ Error guardando respuestas. Revisá la consola.");
+    console.error(err);
+  }
+}
+
+// Generar PDF
+function generarPDF(){
+  const contenido=divPreg.innerHTML;
+  const win=window.open('','','width=800,height=600');
+  win.document.write('<html><head><title>Examen PDF</title></head><body>');
+  win.document.write(`<h1>Examen - ${selMat.value}</h1>`);
+  win.document.write(`<h3>Estudiante: ${selEst.value}</h3>`);
+  win.document.write(contenido);
+  win.document.write('</body></html>');
+  win.document.close();
+  win.print();
+}
+</script>
+</body>
+</html>
